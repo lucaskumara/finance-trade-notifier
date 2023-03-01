@@ -1,15 +1,18 @@
+import argparse
 import os
 import requests
-import sqlite3
 
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from enum import Enum
-from twilio.rest import Client
 
 load_dotenv()
 
-twilio_client = Client(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument("-t", "--ticker", type=str)
+parser.add_argument("-v", "--volatility", type=str)
 
 
 class Action(Enum):
@@ -65,74 +68,18 @@ class Stock:
             return Action.HOLD
 
 
-def get_tickers(cursor):
-    result = cursor.execute("SELECT DISTINCT ticker FROM tickers")
-    rows = result.fetchall()
-
-    return [row[0] for row in rows]
-
-
-def get_volatility(cursor, ticker):
-    result = cursor.execute(
-        "SELECT DISTINCT volatility FROM volatilities WHERE ticker = ?", (ticker,)
-    )
-    row = result.fetchone()
-
-    if row[0] == "low":
-        return Volatility.LOW
-    else:
-        return Volatility.HIGH
-
-
-def get_phone_numbers(cursor, ticker):
-    result = cursor.execute(
-        "SELECT DISTINCT phone_number FROM tickers WHERE ticker = ?", (ticker,)
-    )
-    rows = result.fetchall()
-
-    return [row[0] for row in rows]
-
-
-def send_text(number, message):
-    message = twilio_client.messages.create(
-        body=message, from_=f"+1{os.getenv('TWILIO_NUMBER')}", to=f"+1{number}"
-    )
-
-
 if __name__ == "__main__":
-    connection = sqlite3.connect("database.db")
-    cursor = connection.cursor()
+    args = parser.parse_args()
 
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS tickers (
-            ticker TEXT, 
-            phone_number TEXT
-        )
-        """
-    )
+    ticker = args.ticker.upper()
+    volatilty = Volatility.LOW if args.volatility.lower() == "low" else Volatility.HIGH
 
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS volatilities (
-            ticker TEXT, 
-            volatility TEXT
-        )
-        """
-    )
+    stock = Stock(ticker, Volatility.HIGH)
+    stock_action = stock.evaluate()
 
-    for ticker in get_tickers(cursor):
-        volatility = get_volatility(cursor, ticker)
-        phone_numbers = get_phone_numbers(cursor, ticker)
-
-        stock = Stock(ticker, volatility)
-        stock_action = stock.evaluate()
-
-        for number in phone_numbers:
-            if stock_action == Action.BUY:
-                send_text(number, f"Buy {ticker}")
-            elif stock_action == Action.SELL:
-                send_text(number, f"Sell {ticker}")
-
-    cursor.close()
-    connection.close()
+    if stock_action == Action.BUY:
+        print("BUY")
+    elif stock_action == Action.SELL:
+        print("SELL")
+    else:
+        print("HOLD")
