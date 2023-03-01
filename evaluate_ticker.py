@@ -42,7 +42,7 @@ class Stock:
         past_date_string = past_date.strftime("%Y-%m-%d")
 
         response = requests.get(
-            f"https://api.polygon.io/v2/aggs/ticker/{self.ticker}/range/1/day/{past_date_string}/{present_date_string}?adjusted=true&sort=asc&limit=365&apiKey={os.getenv('POLYGON_API_KEY')}"
+            f"https://api.polygon.io/v2/aggs/ticker/{self.ticker}/range/1/day/{past_date_string}/{present_date_string}?adjusted=true&sort=asc&limit=365&apiKey={os.getenv('API_KEY')}"
         )
         response_data = response.json()
 
@@ -50,7 +50,7 @@ class Stock:
 
     def __fetch_current_price(self):
         response = requests.get(
-            f"https://api.polygon.io/v2/aggs/ticker/{self.ticker}/prev?adjusted=true&apiKey={os.getenv('POLYGON_API_KEY')}"
+            f"https://api.polygon.io/v2/aggs/ticker/{self.ticker}/prev?adjusted=true&apiKey={os.getenv('API_KEY')}"
         )
         response_data = response.json()
 
